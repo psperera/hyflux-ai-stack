@@ -1,0 +1,42 @@
+hyflux-ai-stack/
+├── README.md
+├── docker-compose.yml
+├── .env.example
+├── Makefile
+├── scripts/
+│   └── bootstrap.sh
+├── portal/
+│   ├── index.html
+│   ├── hyflux.css
+│   ├── rag.html
+│   ├── rag.js
+│   ├── visualizer.html
+│   └── diagnostics.html
+├── rag-api/
+│   ├── server.py
+│   └── requirements.txt
+├── cryo-sim/
+│   ├── cryo_sim.py
+│   ├── cryo_api.py
+│   └── requirements.txt
+├── search-hub/
+│   ├── server.py
+│   └── requirements.txt
+├── research/               # GPT-Researcher (cloned or submodule)
+├── research_data/
+├── searxng/
+├── meilisearch/
+├── qdrant/
+├── postgres/
+├── open-webui/
+├── open-notebook/
+├── presenton/
+├── sd-a1111/
+├── watch/
+├── ingest_logs/
+├── docs/
+│   └── INSTALLATION.md
+└── .github/
+    └── workflows/
+        ├── ci.yml
+        └── watchtower-config-check.yml
