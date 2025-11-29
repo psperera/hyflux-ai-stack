@@ -1,0 +1,218 @@
+---
+
+# ✅ `docker-compose.yml` (Watchtower included)
+
+```yaml
+version: "3.9"
+
+networks:
+  ai-net:
+
+services:
+
+  web-portal:
+    image: nginx:alpine
+    container_name: web-portal
+    restart: unless-stopped
+    networks: [ai-net]
+    ports: ["8080:80"]
+    volumes:
+      - ./portal:/usr/share/nginx/html:ro
+    mem_limit: 256m
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    restart: unless-stopped
+    networks: [ai-net]
+    ports: ["3000:8080"]
+    environment:
+      TZ: ${TZ}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL}
+      SEARXNG_URL: http://searxng:8080
+      MEILISEARCH_URL: http://meilisearch:7700
+      QDRANT_URL: http://qdrant:6333
+      PGVECTOR_URL: postgres://postgres:${PG_PASSWORD}@postgres:5432/vector_db
+    volumes:
+      - ./open-webui:/app/backend/data
+    mem_limit: 6g
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  open-notebook:
+    image: lfnovo/open-notebook:latest
+    container_name: open-notebook
+    restart: unless-stopped
+    networks: [ai-net]
+    ports: ["3050:3000"]
+    environment:
+      TZ: ${TZ}
+    volumes:
+      - ./open-notebook:/app/data
+    mem_limit: 6g
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  presenton:
+    image: ghcr.io/presenton/presenton:latest
+    container_name: presenton
+    restart: unless-stopped
+    networks: [ai-net]
+    ports: ["3100:3000"]
+    volumes:
+      - ./presenton:/app/data
+    mem_limit: 4g
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  sd-a1111:
+    image: ghcr.io/abdeladim-s/automatic1111-sd-webui:latest
+    container_name: sd-a1111
+    restart: unless-stopped
+    networks: [ai-net]
+    ports: ["7860:7860"]
+    volumes:
+      - ./sd-a1111/models:/models
+      - ./sd-a1111/output:/output
+      - ./sd-a1111/config:/config
+    mem_limit: 8g
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  searxng:
+    image: searxng/searxng:latest
+    container_name: searxng
+    restart: unless-stopped
+    networks: [ai-net]
+    ports: ["8081:8080"]
+    volumes:
+      - ./searxng:/etc/searxng
+    environment:
+      SEARXNG_BASE_URL: http://localhost:8081
+    mem_limit: 1g
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.7
+    container_name: meilisearch
+    restart: unless-stopped
+    networks: [ai-net]
+    ports: ["7700:7700"]
+    volumes:
+      - ./meilisearch:/meili_data
+    environment:
+      MEILI_MASTER_KEY: ${PG_PASSWORD}
+    mem_limit: 2g
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    restart: unless-stopped
+    networks: [ai-net]
+    ports: ["6333:6333"]
+    volumes:
+      - ./qdrant:/qdrant/storage
+    mem_limit: 2g
+
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    networks: [ai-net]
+    ports: ["5432:5432"]
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: vector_db
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+    mem_limit: 2g
+
+  rag-api:
+    image: python:3.11-slim
+    container_name: rag-api
+    restart: unless-stopped
+    networks: [ai-net]
+    working_dir: /app
+    volumes:
+      - ./rag-api:/app
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      MEILISEARCH_URL: http://meilisearch:7700
+      MEILI_KEY: ${PG_PASSWORD}
+      QDRANT_URL: http://qdrant:6333
+      PGVECTOR_URL: postgres://postgres:${PG_PASSWORD}@postgres:5432/vector_db
+    command: >
+      bash -c "pip install -r requirements.txt &&
+               uvicorn server:app --host 0.0.0.0 --port 8000"
+    ports:
+      - "8000:8000"
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    mem_limit: 2g
+
+  cryosim:
+    image: python:3.11-slim
+    container_name: cryosim
+    networks: [ai-net]
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./cryo-sim:/app
+    command: >
+      bash -c "pip install -r requirements.txt &&
+               uvicorn cryo_api:app --host 0.0.0.0 --port 5001"
+    ports:
+      - "5001:5001"
+    mem_limit: 1g
+
+  gpt-researcher:
+    build:
+      context: ./research
+    container_name: gpt-researcher
+    networks: [ai-net]
+    restart: unless-stopped
+    volumes:
+      - ./research_data:/app/data
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      SERPAPI_API_KEY: ${SERPAPI_API_KEY}
+      BING_SEARCH_URL: ${BING_SEARCH_URL}
+      BING_SUBSCRIPTION_KEY: ${BING_SUBSCRIPTION_KEY}
+      TAVILY_API_KEY: ${TAVILY_API_KEY}
+    ports:
+      - "8501:8501"
+    mem_limit: 4g
+
+  search-hub:
+    image: python:3.11-slim
+    container_name: search-hub
+    networks: [ai-net]
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./search-hub:/app
+    environment:
+      SERPAPI_API_KEY: ${SERPAPI_API_KEY}
+      TAVILY_API_KEY: ${TAVILY_API_KEY}
+      BING_SEARCH_URL: ${BING_SEARCH_URL}
+      BING_SUBSCRIPTION_KEY: ${BING_SUBSCRIPTION_KEY}
+      SEARXNG_URL: http://searxng:8080
+    command: >
+      bash -c "pip install -r requirements.txt &&
+               uvicorn server:app --host 0.0.0.0 --port 8000"
+    ports:
+      - "8600:8000"
+    mem_limit: 2g
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    networks: [ai-net]
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --label-enable --cleanup --interval 3600
+    mem_limit: 512m
