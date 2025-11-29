@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# Node / frontend
+node_modules/
+
+# Env
+.env
+.env.*
+
+# Docker volumes / data
+meilisearch/
+qdrant/
+postgres/
+open-webui/
+open-notebook/
+presenton/
+sd-a1111/
+searxng/
+research_data/
+watch/
+ingest_logs/
+
+# OS junk
+.DS_Store
